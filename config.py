@@ -23,15 +23,19 @@ except:
     print("[CONFIG] Running locally - using .env file")
 
 # Helper function to get config
-def get_secret(key: str, default: str = '', section: str = None):
+def get_secret(key: str, default: str = ''):
     """Get secret from Streamlit secrets or environment variables"""
     if USE_STREAMLIT_SECRETS:
         try:
             import streamlit as st
-            if section and section in st.secrets:
-                return st.secrets[section].get(key, os.getenv(key, default))
-            return st.secrets.get(key, os.getenv(key, default))
-        except:
+            # Try to get from secrets (flat structure)
+            value = st.secrets.get(key, None)
+            if value is not None:
+                return str(value)
+            # Fallback to environment variable
+            return os.getenv(key, default)
+        except Exception as e:
+            print(f"[CONFIG WARNING] Error reading secret '{key}': {e}")
             return os.getenv(key, default)
     else:
         # Running locally - use environment variables from .env
