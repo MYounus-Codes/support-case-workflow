@@ -61,20 +61,41 @@ except Exception as e:
 st.divider()
 
 # Check individual secrets
-st.header("3. Individual Secret Values")
+st.header("3. Individual Secret Values (Nested Structure)")
 
 if hasattr(st, 'secrets'):
-    critical_keys = ['USE_MOCK_EMAIL', 'SENDER_EMAIL', 'SENDER_PASSWORD', 'SMTP_SERVER', 'SMTP_PORT']
-    
-    for key in critical_keys:
-        if key in st.secrets:
-            value = st.secrets[key]
-            if 'PASSWORD' in key or 'KEY' in key:
-                st.write(f"**{key}:** `{'*' * min(len(str(value)), 20)}` (length: {len(str(value))})")
+    # Check email section
+    st.subheader("📧 Email Configuration")
+    if 'email' in st.secrets:
+        email_keys = ['use_mock', 'sender_email', 'sender_password', 'smtp_server', 'smtp_port']
+        for key in email_keys:
+            if key in st.secrets['email']:
+                value = st.secrets['email'][key]
+                if 'password' in key.lower():
+                    st.write(f"**email.{key}:** `{'*' * min(len(str(value)), 20)}` (length: {len(str(value))})")
+                else:
+                    st.write(f"**email.{key}:** `{value}`")
             else:
-                st.write(f"**{key}:** `{value}`")
-        else:
-            st.error(f"❌ **{key}:** NOT FOUND in secrets!")
+                st.error(f"❌ **email.{key}:** NOT FOUND!")
+    else:
+        st.error("❌ **[email] section NOT FOUND in secrets!**")
+        st.warning("Your secrets need [email] section with nested keys!")
+    
+    # Check supabase section
+    st.subheader("🗄️ Supabase Configuration")
+    if 'supabase' in st.secrets:
+        st.write(f"**supabase.url:** `{st.secrets['supabase'].get('url', 'NOT SET')}`")
+        key_val = st.secrets['supabase'].get('key', '')
+        st.write(f"**supabase.key:** `{'*' * min(len(str(key_val)), 20)}...`" if key_val else "❌ NOT SET")
+    else:
+        st.warning("⚠️ **[supabase] section not found**")
+    
+    # Check environment section
+    st.subheader("⚙️ Environment Configuration")
+    if 'environment' in st.secrets:
+        st.write(f"**environment.mode:** `{st.secrets['environment'].get('mode', 'NOT SET')}`")
+    else:
+        st.warning("⚠️ **[environment] section not found**")
 
 st.divider()
 

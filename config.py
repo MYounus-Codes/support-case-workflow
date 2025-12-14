@@ -22,20 +22,21 @@ try:
 except:
     print("[CONFIG] Running locally - using .env file")
 
-# Helper function to get config
-def get_secret(key: str, default: str = ''):
-    """Get secret from Streamlit secrets or environment variables"""
+# Helper function to get config with section support
+def get_secret(key: str, default: str = '', section: str = None):
+    """Get secret from Streamlit secrets (nested) or environment variables (flat)"""
     if USE_STREAMLIT_SECRETS:
         try:
             import streamlit as st
-            # Try to get from secrets (flat structure)
-            value = st.secrets.get(key, None)
-            if value is not None:
-                return str(value)
+            # Try nested structure first: st.secrets["section"]["key"]
+            if section and section in st.secrets:
+                value = st.secrets[section].get(key, None)
+                if value is not None:
+                    return str(value)
             # Fallback to environment variable
             return os.getenv(key, default)
         except Exception as e:
-            print(f"[CONFIG WARNING] Error reading secret '{key}': {e}")
+            print(f"[CONFIG WARNING] Error reading secret [{section}]['{key}']: {e}")
             return os.getenv(key, default)
     else:
         # Running locally - use environment variables from .env
@@ -46,17 +47,17 @@ def get_secret(key: str, default: str = ''):
 # ============================================================================
 
 # Set to 'production' to use real Supabase, 'development' for mock
-ENVIRONMENT = get_secret('ENVIRONMENT', 'development')
+ENVIRONMENT = get_secret('mode', 'development', section='environment')
 
 # ============================================================================
 # ADMIN AUTHENTICATION
 # ============================================================================
 
 ADMIN_CONFIG = {
-    'username': get_secret('ADMIN_USERNAME', 'admin'),
-    'email': get_secret('ADMIN_EMAIL', 'admin@supportautomation.com'),
-    'password': get_secret('ADMIN_PASSWORD', 'Admin@123456'),
-    'enabled': get_secret('ADMIN_ENABLED', 'true').lower() == 'true'
+    'username': get_secret('username', 'admin', section='admin'),
+    'email': get_secret('email', 'admin@supportautomation.com', section='admin'),
+    'password': get_secret('password', 'Admin@123456', section='admin'),
+    'enabled': get_secret('enabled', 'true', section='admin').lower() == 'true'
 }
 
 # ============================================================================
@@ -64,8 +65,8 @@ ADMIN_CONFIG = {
 # ============================================================================
 
 SUPABASE_CONFIG = {
-    'url': get_secret('SUPABASE_URL', ''),
-    'key': get_secret('SUPABASE_KEY', ''),
+    'url': get_secret('url', '', section='supabase'),
+    'key': get_secret('key', '', section='supabase'),
     'use_mock': ENVIRONMENT == 'development'
 }
 
@@ -73,23 +74,23 @@ SUPABASE_CONFIG = {
 # EMAIL CONFIGURATION
 # ============================================================================
 
-_sender_email = get_secret('SENDER_EMAIL', '').strip()
-_sender_password = get_secret('SENDER_PASSWORD', '').strip()
-_use_mock_env = get_secret('USE_MOCK_EMAIL', 'false').lower().strip() == 'true'
+_sender_email = get_secret('sender_email', '', section='email').strip()
+_sender_password = get_secret('sender_password', '', section='email').strip()
+_use_mock_env = get_secret('use_mock', 'false', section='email').lower().strip() == 'true'
 
 # Convert port to int safely
 try:
-    _smtp_port = int(get_secret('SMTP_PORT', '587'))
+    _smtp_port = int(get_secret('smtp_port', '587', section='email'))
 except (ValueError, TypeError):
     _smtp_port = 587
     print("[CONFIG WARNING] Invalid SMTP_PORT, using default 587")
 
 EMAIL_CONFIG = {
-    'smtp_server': get_secret('SMTP_SERVER', 'smtp.gmail.com').strip(),
+    'smtp_server': get_secret('smtp_server', 'smtp.gmail.com', section='email').strip(),
     'smtp_port': _smtp_port,
     'sender_email': _sender_email,
     'sender_password': _sender_password,
-    'company_name': get_secret('COMPANY_NAME', 'Support Automation System'),
+    'company_name': get_secret('company_name', 'Support Automation System', section='email'),
     # Use mock email only if explicitly set to true OR if credentials are missing
     'use_mock': _use_mock_env or not _sender_email or not _sender_password
 }
