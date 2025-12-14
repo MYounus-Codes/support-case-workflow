@@ -597,13 +597,23 @@ Best regards,
 {EMAIL_CONFIG['company_name']} Team
             """
             
+            # Debug logging
+            is_mock = EMAIL_CONFIG.get('use_mock', True)
+            print(f"[EMAIL DEBUG] Mock mode: {is_mock}")
+            print(f"[EMAIL DEBUG] ENVIRONMENT: {ENVIRONMENT}")
+            print(f"[EMAIL DEBUG] Sender email configured: {bool(EMAIL_CONFIG.get('sender_email'))}")
+            print(f"[EMAIL DEBUG] Sender password configured: {bool(EMAIL_CONFIG.get('sender_password'))}")
+            
             # Use mock or real email based on configuration
-            if EMAIL_CONFIG.get('use_mock', True):
+            if is_mock:
                 print(f"[EMAIL MOCK] Sending verification code to {to_email}")
                 print(f"[EMAIL MOCK] Verification Code: {code}")
+                st.warning("⚠️ Running in MOCK mode - No actual email sent. Check your Streamlit Cloud secrets!")
+                st.info(f"Mock Verification Code: **{code}**")
                 return True
             else:
                 # Real email sending
+                print(f"[EMAIL] Attempting to send real email to {to_email}")
                 message = MIMEMultipart()
                 message['From'] = EMAIL_CONFIG['sender_email']
                 message['To'] = to_email
@@ -612,15 +622,26 @@ Best regards,
                 
                 with smtplib.SMTP(EMAIL_CONFIG['smtp_server'], EMAIL_CONFIG['smtp_port']) as server:
                     server.starttls()
+                    print(f"[EMAIL] Connected to SMTP server")
                     server.login(EMAIL_CONFIG['sender_email'], EMAIL_CONFIG['sender_password'])
+                    print(f"[EMAIL] Logged in successfully")
                     server.send_message(message)
+                    print(f"[EMAIL] Email sent successfully")
                 
-                print(f"[EMAIL] Verification code sent to {to_email}")
+                st.success(f"✅ Verification code sent to {to_email}")
                 return True
                 
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"[ERROR] SMTP Authentication failed: {e}")
+            st.error("❌ Email authentication failed. Please check your Gmail App Password in Streamlit secrets.")
+            return False
+        except smtplib.SMTPException as e:
+            print(f"[ERROR] SMTP error: {e}")
+            st.error(f"❌ Email sending failed: {str(e)}")
+            return False
         except Exception as e:
             print(f"[ERROR] Email sending failed: {e}")
-            st.error(f"Failed to send email: {str(e)}")
+            st.error(f"❌ Failed to send email: {str(e)}")
             return False
     
     @staticmethod

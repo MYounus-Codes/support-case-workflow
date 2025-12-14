@@ -7,25 +7,45 @@ import os
 from typing import Dict
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file (local development)
 load_dotenv()
+
+# Try to load Streamlit secrets (Streamlit Cloud)
+try:
+    import streamlit as st
+    if hasattr(st, 'secrets'):
+        # Helper function to get config from Streamlit secrets or environment
+        def get_secret(key: str, default: str = '', section: str = None):
+            """Get secret from Streamlit secrets or environment variables"""
+            try:
+                if section:
+                    return st.secrets[section].get(key, os.getenv(key, default))
+                return st.secrets.get(key, os.getenv(key, default))
+            except:
+                return os.getenv(key, default)
+    else:
+        def get_secret(key: str, default: str = '', section: str = None):
+            return os.getenv(key, default)
+except ImportError:
+    def get_secret(key: str, default: str = '', section: str = None):
+        return os.getenv(key, default)
 
 # ============================================================================
 # ENVIRONMENT CONFIGURATION
 # ============================================================================
 
 # Set to 'production' to use real Supabase, 'development' for mock
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+ENVIRONMENT = get_secret('ENVIRONMENT', 'development', 'general')
 
 # ============================================================================
 # ADMIN AUTHENTICATION
 # ============================================================================
 
 ADMIN_CONFIG = {
-    'username': os.getenv('ADMIN_USERNAME', 'admin'),
-    'email': os.getenv('ADMIN_EMAIL', 'admin@supportautomation.com'),
-    'password': os.getenv('ADMIN_PASSWORD', 'Admin@123456'),  # Change in production!
-    'enabled': os.getenv('ADMIN_ENABLED', 'true').lower() == 'true'
+    'username': get_secret('ADMIN_USERNAME', 'admin', 'admin'),
+    'email': get_secret('ADMIN_EMAIL', 'admin@supportautomation.com', 'admin'),
+    'password': get_secret('ADMIN_PASSWORD', 'Admin@123456', 'admin'),
+    'enabled': get_secret('ADMIN_ENABLED', 'true', 'admin').lower() == 'true'
 }
 
 # ============================================================================
@@ -33,8 +53,8 @@ ADMIN_CONFIG = {
 # ============================================================================
 
 SUPABASE_CONFIG = {
-    'url': os.getenv('SUPABASE_URL', 'https://eetdfpfojtktsicojqst.supabase.co'),
-    'key': os.getenv('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldGRmcGZvanRrdHNpY29qcXN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2MzE0NzcsImV4cCI6MjA4MTIwNzQ3N30.m1ESYsxFBO-ECPK9vhfNrOVz9UCv29PVn3igwq5nqy4'),
+    'url': get_secret('SUPABASE_URL', '', 'supabase'),
+    'key': get_secret('SUPABASE_KEY', '', 'supabase'),
     'use_mock': ENVIRONMENT == 'development'
 }
 
@@ -43,13 +63,18 @@ SUPABASE_CONFIG = {
 # ============================================================================
 
 EMAIL_CONFIG = {
-    'smtp_server': os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
-    'smtp_port': int(os.getenv('SMTP_PORT', '587')),
-    'sender_email': os.getenv('SENDER_EMAIL', 'your-email@gmail.com'),
-    'sender_password': os.getenv('SENDER_PASSWORD', 'your-app-password'),
-    'company_name': os.getenv('COMPANY_NAME', 'Support Automation System'),
-    # Use real email if credentials are properly configured, regardless of environment
-    'use_mock': os.getenv('USE_MOCK_EMAIL', 'false').lower() == 'true'
+    'smtp_server': get_secret('SMTP_SERVER', 'smtp.gmail.com', 'email'),
+    'smtp_port': int(get_secret('SMTP_PORT', '587', 'email')),
+    'sender_email': get_secret('SENDER_EMAIL', '', 'email'),
+    'sender_password': get_secret('SENDER_PASSWORD', '', 'email'),
+    'company_name': get_secret('COMPANY_NAME', 'Support Automation System', 'email'),
+    # Use mock email only in development or if credentials are not set
+    'use_mock': (
+        ENVIRONMENT == 'development' or 
+        get_secret('USE_MOCK_EMAIL', 'false', 'email').lower() == 'true' or
+        not get_secret('SENDER_EMAIL', '', 'email') or 
+        not get_secret('SENDER_PASSWORD', '', 'email')
+    )
 }
 
 # ============================================================================
