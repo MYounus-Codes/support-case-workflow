@@ -10,24 +10,31 @@ from dotenv import load_dotenv
 # Load environment variables from .env file (local development)
 load_dotenv()
 
-# Try to load Streamlit secrets (Streamlit Cloud)
+# Check if running in Streamlit Cloud (has secrets) or locally (use .env)
+USE_STREAMLIT_SECRETS = False
 try:
     import streamlit as st
-    if hasattr(st, 'secrets'):
-        # Helper function to get config from Streamlit secrets or environment
-        def get_secret(key: str, default: str = '', section: str = None):
-            """Get secret from Streamlit secrets or environment variables"""
-            try:
-                if section:
-                    return st.secrets[section].get(key, os.getenv(key, default))
-                return st.secrets.get(key, os.getenv(key, default))
-            except:
-                return os.getenv(key, default)
+    if hasattr(st, 'secrets') and len(st.secrets) > 0:
+        USE_STREAMLIT_SECRETS = True
+        print("[CONFIG] Running in Streamlit Cloud - using secrets")
     else:
-        def get_secret(key: str, default: str = '', section: str = None):
+        print("[CONFIG] Running locally - using .env file")
+except:
+    print("[CONFIG] Running locally - using .env file")
+
+# Helper function to get config
+def get_secret(key: str, default: str = '', section: str = None):
+    """Get secret from Streamlit secrets or environment variables"""
+    if USE_STREAMLIT_SECRETS:
+        try:
+            import streamlit as st
+            if section and section in st.secrets:
+                return st.secrets[section].get(key, os.getenv(key, default))
+            return st.secrets.get(key, os.getenv(key, default))
+        except:
             return os.getenv(key, default)
-except ImportError:
-    def get_secret(key: str, default: str = '', section: str = None):
+    else:
+        # Running locally - use environment variables from .env
         return os.getenv(key, default)
 
 # ============================================================================
@@ -35,17 +42,17 @@ except ImportError:
 # ============================================================================
 
 # Set to 'production' to use real Supabase, 'development' for mock
-ENVIRONMENT = get_secret('ENVIRONMENT', 'development', 'general')
+ENVIRONMENT = get_secret('ENVIRONMENT', 'development')
 
 # ============================================================================
 # ADMIN AUTHENTICATION
 # ============================================================================
 
 ADMIN_CONFIG = {
-    'username': get_secret('ADMIN_USERNAME', 'admin', 'admin'),
-    'email': get_secret('ADMIN_EMAIL', 'admin@supportautomation.com', 'admin'),
-    'password': get_secret('ADMIN_PASSWORD', 'Admin@123456', 'admin'),
-    'enabled': get_secret('ADMIN_ENABLED', 'true', 'admin').lower() == 'true'
+    'username': get_secret('ADMIN_USERNAME', 'admin'),
+    'email': get_secret('ADMIN_EMAIL', 'admin@supportautomation.com'),
+    'password': get_secret('ADMIN_PASSWORD', 'Admin@123456'),
+    'enabled': get_secret('ADMIN_ENABLED', 'true').lower() == 'true'
 }
 
 # ============================================================================
@@ -53,8 +60,8 @@ ADMIN_CONFIG = {
 # ============================================================================
 
 SUPABASE_CONFIG = {
-    'url': get_secret('SUPABASE_URL', '', 'supabase'),
-    'key': get_secret('SUPABASE_KEY', '', 'supabase'),
+    'url': get_secret('SUPABASE_URL', ''),
+    'key': get_secret('SUPABASE_KEY', ''),
     'use_mock': ENVIRONMENT == 'development'
 }
 
@@ -62,20 +69,25 @@ SUPABASE_CONFIG = {
 # EMAIL CONFIGURATION
 # ============================================================================
 
+_sender_email = get_secret('SENDER_EMAIL', '')
+_sender_password = get_secret('SENDER_PASSWORD', '')
+_use_mock_env = get_secret('USE_MOCK_EMAIL', 'false').lower() == 'true'
+
 EMAIL_CONFIG = {
-    'smtp_server': get_secret('SMTP_SERVER', 'smtp.gmail.com', 'email'),
-    'smtp_port': int(get_secret('SMTP_PORT', '587', 'email')),
-    'sender_email': get_secret('SENDER_EMAIL', '', 'email'),
-    'sender_password': get_secret('SENDER_PASSWORD', '', 'email'),
-    'company_name': get_secret('COMPANY_NAME', 'Support Automation System', 'email'),
-    # Use mock email only in development or if credentials are not set
-    'use_mock': (
-        ENVIRONMENT == 'development' or 
-        get_secret('USE_MOCK_EMAIL', 'false', 'email').lower() == 'true' or
-        not get_secret('SENDER_EMAIL', '', 'email') or 
-        not get_secret('SENDER_PASSWORD', '', 'email')
-    )
+    'smtp_server': get_secret('SMTP_SERVER', 'smtp.gmail.com'),
+    'smtp_port': int(get_secret('SMTP_PORT', '587')),
+    'sender_email': _sender_email,
+    'sender_password': _sender_password,
+    'company_name': get_secret('COMPANY_NAME', 'Support Automation System'),
+    # Use mock email only if explicitly set to true OR if credentials are missing
+    'use_mock': _use_mock_env or not _sender_email or not _sender_password
 }
+
+# Debug logging
+print(f"[CONFIG] Email sender configured: {bool(_sender_email)}")
+print(f"[CONFIG] Email password configured: {bool(_sender_password)}")
+print(f"[CONFIG] USE_MOCK_EMAIL setting: {_use_mock_env}")
+print(f"[CONFIG] Email mode: {'MOCK' if EMAIL_CONFIG['use_mock'] else 'REAL'}")
 
 # ============================================================================
 # MANUFACTURERS CONFIGURATION
