@@ -73,13 +73,20 @@ SUPABASE_CONFIG = {
 # EMAIL CONFIGURATION
 # ============================================================================
 
-_sender_email = get_secret('SENDER_EMAIL', '')
-_sender_password = get_secret('SENDER_PASSWORD', '')
-_use_mock_env = get_secret('USE_MOCK_EMAIL', 'false').lower() == 'true'
+_sender_email = get_secret('SENDER_EMAIL', '').strip()
+_sender_password = get_secret('SENDER_PASSWORD', '').strip()
+_use_mock_env = get_secret('USE_MOCK_EMAIL', 'false').lower().strip() == 'true'
+
+# Convert port to int safely
+try:
+    _smtp_port = int(get_secret('SMTP_PORT', '587'))
+except (ValueError, TypeError):
+    _smtp_port = 587
+    print("[CONFIG WARNING] Invalid SMTP_PORT, using default 587")
 
 EMAIL_CONFIG = {
-    'smtp_server': get_secret('SMTP_SERVER', 'smtp.gmail.com'),
-    'smtp_port': int(get_secret('SMTP_PORT', '587')),
+    'smtp_server': get_secret('SMTP_SERVER', 'smtp.gmail.com').strip(),
+    'smtp_port': _smtp_port,
     'sender_email': _sender_email,
     'sender_password': _sender_password,
     'company_name': get_secret('COMPANY_NAME', 'Support Automation System'),
