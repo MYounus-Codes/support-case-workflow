@@ -1,0 +1,53 @@
+# Core dependencies
+streamlit>=1.31.0
+supabase>=2.9.0
+python-dotenv>=1.0.0
+
+# API and communication
+requests>=2.31.0
+
+# Translation and language detection
+langdetect>=1.0.9
+deep-translator>=1.11.4
+
+# Scheduling
+schedule>=1.2.0
+
+# Database (optional)
+sqlalchemy>=2.0.23
+
+
+# Support Automation System - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core Framework
+streamlit==1.31.0
+
+# Database
+supabase==2.3.0
+postgrest==0.13.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# Email
+secure-smtplib==0.1.1
+
+# Utilities
+python-dateutil==2.8.2
+
+# Optional: For Production
+# gunicorn==21.2.0
+# schedule==1.2.0
+
+# Optional: Translation APIs (choose one)
+# googletrans==4.0.0rc1
+# deep-translator==1.11.4
+
+# Optional: Language Detection
+# langdetect==1.0.9
+
+# Optional: Advanced Features
+# redis==5.0.1  # For session management
+# celery==5.3.4  # For background tasks
+# APScheduler==3.10.4  # For scheduled jobs
